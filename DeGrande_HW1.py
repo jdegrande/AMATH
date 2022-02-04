@@ -24,7 +24,7 @@ from IPython.display import clear_output
 # import plotly.io as pio
 # pio.renderers.default = "firefox"
 
-# ############### Setting up the data - I miss sections in matlab :(, wonder if there is something similar in python?
+# ############### Setting up the data
 # set the data path
 dataPath = '/Users/jensen/Library/Mobile Documents/com~apple~CloudDocs/AMATH582/Homework/HW1/subdata.npy'
 # load the data
