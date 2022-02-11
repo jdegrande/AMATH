@@ -92,23 +92,30 @@ pca.fit(X_train)  # .fit automatically centers the data
 # dimensions. However since each feature corresponds to a pixel value and uses the same units, we don't need to use
 # StandardScaler. Especially since we want the principal components to align with pixels with high variation, we don't
 # want to make each feature (pixel) have the same variance
+# pixel values are already between 0 and 1 so there really is no need to standard, however, if the features were on
+# different scales then it would be important to standardize
 
+# finding the effective dimension --  see where the singular values taper off ~100?
+# plot pca with the full dimension - not just the n_compnents = 16
+# log of variances
+# you should plot more than just 16 - you should plot all of them
 
-# plot using pca.components_
 
 # UNCOMMENT LATER
-plot_digits(pca.components_, 4, 'First 16 PCA Modes')
+plt.figure()
+plt.plot(pca.singular_values_)
+#plt.plot(np.log(pca.explained_variance_))
+plt.title('Dimensionality Analysis')
+plt.xlabel('index $j$')
+plt.ylabel('$\log(\sigma_j)$')
+plt.legend(['pca.singular_values_', 'log(pca.singular_values_)'])
+
+
+# plot the first 16
+# UNCOMMENT LATER
+# plot_digits(pca.components_, 4, 'First 16 PCA Modes')
 # Where Principle component 1 (top, left) accounts for the most variation and is used the most in grouping the
 # handwritten digits into 0 through 9.
-
-
-# # UNCOMMENT LATER
-# plt.figure()
-# plt.plot(np.log(pca.singular_values_))
-# plt.plot(pca.singular_values_)
-# plt.xlabel('index $j$')
-# plt.ylabel('$\log(\sigma_j)$')
-# plt.legend(['pca.singular_values_', 'log(pca.singular_values_)'])
 
 # reconstruct it
 pca16 = PCA(16)
@@ -116,8 +123,8 @@ pca16.fit(X_train)
 transformed_X = pca.transform(X_train)
 # inverse_X = pca.inverse_transform(transformed_X)
 # then use plot_digits to plot these images
-plot_digits(pca16.components_, 4, 'First 16 PCA Modes')
-#plot_digits(transformed_X,4,'Transformed')
+# plot_digits(pca16.components_, 4, 'First 16 PCA Modes')
+# plot_digits(transformed_X,4,'Transformed')
 
 ######################################################################################################################
 # Task 2: How many PCA modes do you need in order to approximate Xtrain up to 60%, 80%, and 90% in the Frobenius norm?
@@ -139,21 +146,54 @@ norm90 = normTotal * .9
 norm80 = normTotal * .8
 norm60 = normTotal * .6
 
-
 def pca_modes(percent):
     pca_loop = PCA(n_components=1)  # start at the first mode to initialize loop
     pca_loop.fit(X_train)
     i = 1
-    while (np.sqrt(sum(pca_loop.singular_values_ ** 2))) < (normTotal * percent):
+    while (np.sqrt(sum(pca_loop.singular_values_ ** 2))) < (normTotal * percent): # singular values are the sigmas
         i += 1
         pca_loop = PCA(n_components=i)
         pca_loop.fit(X_train)
     return i
 
 
-print(pca_modes(0.9))
-print(pca_modes(0.8))
-print(pca_modes(0.6))
+print(pca_modes(0.9)) #14
+print(pca_modes(0.8)) #7
+print(pca_modes(0.6)) #3
+
+modes= []
+num = np.linspace(0,1.0,num =100)
+
+for i in num:
+    value = pca_modes(i)
+    modes.append(value)
+
+
+# make the plots with the cutoff value set at each one
+plt.figure()
+plt.plot(num,modes)
+plt.plot(0.6,3, 'k*')
+plt.text(0.56,8,'(0.6,3)')
+plt.plot(0.8,7, 'k*')
+plt.text(0.76,13,'(0.8,7)')
+plt.plot(0.9,14, 'k*')
+plt.text(0.86,1,'(0.9,14)')
+plt.title('Number of PCA Modes for Forbenius Norm Approximation')
+plt.xlabel('Percentage of Forbenius Norm')
+plt.ylabel('Number of PCA modes')
+
+# do you need the entire 16x16 image for each data point?
+# by looking at the modes we would need for each norm , we can see what pixels are important and which ones aren't important
+# corner pixels are not important b/c they're usually blank in all of the images of the digits
+# how many modes to capture 90% of variance - plot the images of the rank
+# can tell what the digit is with THESE ranks, so i don't need as much information to identify them
+# mode that is close to 16? don't need the full 16x16 image (256)
+# the answer is NO b/c it is significantly less than 256 - may be larger for 90%?
+# 90% more than 16 but less than 256
+# no we don't, most of the data can be approzimated with less modes
+
+
+
 
 # maybe reconstruct them to prove this?
 
@@ -174,61 +214,44 @@ print(pca_modes(0.6))
 # get indices with np.where
 # then we can do x18 = X_train[indices] == this will take all the rows that correspond to it
 
+# functions for Task 3 ###############################################################################################
 # Write a function that extracts the features and labels of the digits 1 and 8 from the training data set X(1,8)
 # and Y(1,8) --- pass X_train and Y_train
-
-# def extract(X, Y,num1,num2):
-#     count = 0
-#     #extractX = np.array([])
-#     extractX = np.empty((1,256))
-#     extractY = np.array([])
-#     for i in range(0, len(Y)):
-#         if (Y_train[i] == num1) or (Y_train[i] == num2):
-#             # pull index value associated with index i
-#             extractY = np.append(extractY, Y_train[i])
-#             extractX = np.vstack((extractX,X_train[i, :])) # pull the row corresponding to that index
-#             count += 1
-#             print(count)
-#     return extractX, extractY
-
-def extract(X, Y,num1,num2):
+def extract(X, Y, num1, num2):
     count = 0
-    #extractX = np.array([])
-    extractX = np.empty((1,256))
+    # extractX = np.array([])
+    extractX = np.empty((1, 256))
     extractY = np.array([])
     for i in range(0, len(Y)):
-        if (Y[i] == num1) or (Y[i] == num2):
+        if (Y[i] == num1) or (Y[i] == num2): # if value is equal to num1 or num2
             # pull index value associated with index i
             extractY = np.append(extractY, Y[i])
-            extractX = np.vstack((extractX,X[i, :])) # pull the row corresponding to that index
+            extractX = np.vstack((extractX, X[i, :]))  # pull the row corresponding to that index
             count += 1
-            print(count)
+            #print(count)
     return extractX, extractY
 
-# function for relabeling
-def new_label(labels,num1,num2):
+# function for relabeling values with -1 and 1
+def new_label(labels, num1, num2):
     for i in range(0, len(labels)):
         if labels[i] == num1:
             labels[i] = -1
         elif labels[i] == num2:
             labels[i] = 1
-
     return labels
 
-[X1_8_preflip, Y1_8] = extract(X_train, Y_train,1,8) # this is the training set for our classifier
-X1_8 = np.delete(X1_8_preflip,0,0)
+
+[X1_8_preflip, Y1_8] = extract(X_train, Y_train, 1, 8)  # this is the training set for our classifier
+X1_8 = np.delete(X1_8_preflip, 0, 0)
 
 # project X1_8 onto the first 16 PCA modes of X_train computed previously (Task 1)
 # pca16 = PCA(16) # n_components = 16
 # pca16.fit(X_train)
 atrain = pca16.transform(X1_8)
 # append a row of 1's to the beginning ??
-# Then you need to project it onto the first 16 PCA modes which is just X_train18 * U ^ T where U is just pca.components
-# a 16×256 matrix where each row is a pca mode essentially or left singular vector of X_train, the first 16 that is.
 
-
-# reassign labels
-btrain = new_label(Y1_8,1,8)
+# reassign labels - create btrain
+btrain = new_label(Y1_8, 1, 8)
 
 # Use Ridge regression or least squares to train a predictor for the vector Btrain by linearly combining
 # the columns of Atrain
@@ -237,64 +260,165 @@ btrain = new_label(Y1_8,1,8)
 # 3. Predict the training and testing data using the fitted model
 # 4. Use the predictions to calculate the MSE
 
-#axb = atrain*btrain
 
-afunmodel = linear_model.RidgeCV()#alpha=1) # alpha is our lambda
+afunmodel = linear_model.RidgeCV()  # alpha=1) # alpha is our lambda
+# ridgeCV optimizes for us so it will provide the best model for each classifier
 # use pca.transform and ridge.predict on the test data
-afunmodel.fit(atrain,btrain)
-betas = afunmodel.predict(atrain) # or is this (atest)
+afunmodel.fit(atrain, btrain)
+betas = afunmodel.predict(atrain)  # or is this (atest)
 
-MSEtrain = sklearn.metrics.mean_squared_error(btrain,betas)
+MSEtrain18 = sklearn.metrics.mean_squared_error(btrain, betas)
+# MSE atrain x weight that comes out of classifier
+
+newMSE = (1/len(btrain)) * np.linalg.norm(betas - btrain)**2
 
 
-# Let's repeat the process for testing
-#[xtest1_8_pre, ytest1_8] = extract(X_test,Y_test,1,8)
-# xtest1_8 = np.delete(xtest1_8_pre,0,0)
-#
 
-[Xtest1_8_pre, Ytest1_8] = extract(X_test, Y_test,1,8) # this is the training set for our classifier
-Xtest1_8 = np.delete(Xtest1_8_pre,0,0)
+# Let's repeat the process for testing: "here's some other data, let's see how well we trained our PCA by cross
+# checking with y_test"
+# pca.transform(X_test) and then RidgeClassifier.predict(X_test).
+# Test will have more error because the classifier you "fit" or "trained" was on the training data, so in some sense
+# it over fits the training data
+# Test data will give you an idea of how a new sample will perform
+
+[Xtest1_8_pre, Ytest1_8] = extract(X_test, Y_test, 1, 8)  # this is the training set for our classifier
+Xtest1_8 = np.delete(Xtest1_8_pre, 0, 0)
 atest = pca16.transform(Xtest1_8)
-btest = new_label(Ytest1_8,1,8)
+btest = new_label(Ytest1_8, 1, 8)
 
 betasTest = afunmodel.predict(atest)
-MSEtest = sklearn.metrics.mean_squared_error(btest,betasTest)
+MSEtest18 = sklearn.metrics.mean_squared_error(btest, betasTest) # (ytrue, ypred)
+
+rounded = np.round(betasTest)
+
+# Let's plot some figures
+plt.figure()
+#plt.plot(ones,'ko')
+#plt.plot(eights,'kx')
+for i in range(0,len(rounded)):
+    if rounded[i] == -1:
+        plt.plot(i,betasTest[i],'kx')
+    elif rounded[i] == 1:
+        plt.plot(i,betasTest[i], 'ko')
+#plt.plot(betasTest,'bo')
+plt.hlines(y=-1, xmin=0, xmax=len(betasTest),colors='r')
+plt.hlines(y=1, xmin=0, xmax=len(betasTest),colors='r')
+plt.title('Test Data (1,8) Performance')
+plt.xlabel('index $j$')
+plt.ylabel('$Digit Label$')
+plt.legend(['predicted 1s', 'predicted 8s'])
 
 
 
+# Task 4: Use your code from step 3 to train classifiers for the pairs of the digits (3,8) and (2,7) and report the
+# training and test MSE's. Can you explain the performance variations?
+
+# let's repeat the process for (3,8)
+[X3_8temp, Y3_8] = extract(X_train, Y_train, 3, 8)  # this is the training set for our classifier
+X3_8 = np.delete(X3_8temp, 0, 0)
+
+atrain38 = pca16.transform(X3_8) # append a row of 1's to the beginning ??
+
+# reassign labels - create btrain
+btrain38 = new_label(Y3_8, 3, 8)
+
+# create the model to classify 3 and 8
+model38 = linear_model.RidgeCV()  # alpha=1) # alpha is our lambda
+# use pca.transform and ridge.predict on the test data
+model38.fit(atrain38, btrain38)
+betas38 = model38.predict(atrain38)  # or is this (atest)
+
+MSEtrain38 = sklearn.metrics.mean_squared_error(btrain38, betas38)
+
+# let's do testing for values 3 and 8
+[Xtest3_8temp, Ytest3_8] = extract(X_test, Y_test, 3, 8)  # this is the training set for our classifier
+Xtest3_8 = np.delete(Xtest3_8temp, 0, 0)
+
+atest38 = pca16.transform(Xtest3_8)
+btest38 = new_label(Ytest3_8, 3, 8)
+
+betasTest38 = model38.predict(atest38)
+MSEtest38 = sklearn.metrics.mean_squared_error(btest38, betasTest38)
+
+# Let's make a performance plot
+rounded38 = np.round(betasTest38)
+
+# Let's plot some figures
+plt.figure()
+#plt.plot(ones,'ko')
+#plt.plot(eights,'kx')
+for i in range(0,len(rounded38)):
+    if rounded38[i] == -1:
+        plt.plot(i,betasTest38[i],'kx')
+    elif rounded38[i] == 1:
+        plt.plot(i,betasTest38[i], 'ko')
+#plt.plot(betasTest,'bo')
+plt.hlines(y=-1, xmin=0, xmax=len(betasTest38),colors='r')
+plt.hlines(y=1, xmin=0, xmax=len(betasTest38),colors='r')
+plt.title('Test Data (3,8) Performance')
+plt.xlabel('index $j$')
+plt.ylabel('$Digit Label$')
+plt.legend(['predicted 3s', 'predicted 8s'])
 
 
-# FOR THE TESTING PART
-# pca.transform(X_test) and then RidgeClassifier.predict(X_test).
-# So you will need to create the PCA() object and RidgeClassifier() object on the X_train data first
-# then use MSE(prediction_values, b_train)
-# fit everything on train and the test set is to see how that fit performs.  The mse will likely be a little higher
-# because the model hasn't seen the data yet but it should be close
 
-# Yeah so the x_test is basically "here's some other data, let's see how well we trained our PCA by cross checking with
-# y_test"
+# let's repeat the process for (2,7)
+[X2_7temp, Y2_7] = extract(X_train, Y_train, 2, 7)  # this is the training set for our classifier
+X2_7 = np.delete(X2_7temp, 0, 0)
 
-#Test will have more error because the classifier you "fit" or "trained" was on the training data, so in some sense
-# it over fits the training data
-#Test data will give you an idea of how a new sample will perform
+atrain27 = pca16.transform(X2_7) # append a row of 1's to the beginning ??
 
-# Task 4:
+# reassign labels - create btrain
+btrain27 = new_label(Y2_7, 2, 7)
 
-# I got these errors
-# (0.07461037705258981, 0.08328958977029681)
-# (0.18040865451532406, 0.258167720747357)
-# (0.09179226921224412, 0.13649740168758565)
-# Left column is train, right column is test
-# Rows are for comparing (1,8), (2,7), and (3,8)
-# I agree that the reason is because 3 and 8 are more similar
+# create the model to classify 3 and 8
+model27 = linear_model.RidgeCV()  # alpha=1) # alpha is our lambda
+# use pca.transform and ridge.predict on the test data
+model27.fit(atrain27, btrain27)
+betas27 = model27.predict(atrain27)  # or is this (atest)
+
+MSEtrain27 = sklearn.metrics.mean_squared_error(btrain27, betas27)
+
+# let's do testing for values 3 and 8
+[Xtest2_7temp, Ytest2_7] = extract(X_test, Y_test, 2, 7)  # this is the training set for our classifier
+Xtest2_7 = np.delete(Xtest2_7temp, 0, 0)
+
+atest27 = pca16.transform(Xtest2_7)
+btest27 = new_label(Ytest2_7, 2, 7)
+
+betasTest27 = model27.predict(atest27)
+MSEtest27 = sklearn.metrics.mean_squared_error(btest27, betasTest27)
+
+
+rounded27 = np.round(betasTest27)
+
+# Let's plot some figures
+plt.figure()
+#plt.plot(ones,'ko')
+#plt.plot(eights,'kx')
+for i in range(0,len(rounded27)):
+    if rounded27[i] == -1:
+        plt.plot(i,betasTest27[i],'kx')
+    elif rounded27[i] == 1:
+        plt.plot(i,betasTest27[i], 'ko')
+#plt.plot(betasTest,'bo')
+plt.hlines(y=-1, xmin=0, xmax=len(betasTest27),colors='r')
+plt.hlines(y=1, xmin=0, xmax=len(betasTest27),colors='r')
+plt.title('Test Data (2,7) Performance')
+plt.xlabel('index $j$')
+plt.ylabel('$Digit Label$')
+plt.legend(['predicted 2s', 'predicted 7s'])
+
+
+# The model performs the best in training and testing for digits 1 and 8. It performs the worst for digits 3 and 8 in
+# both training and testing, and the model for digits 2 and 7 is between these two end member cases.
+# The performance varies because of the shape of the digits. If digits are more similar, 3 and 8, the model will not
+# perform as well, both in training and testing, but for digits that are distinct, 1 and 8, the model performs
+# well on both the training and the testing. Digits 2 and 7 are a good middle ground to represent this as the digits
+# are not too similar, but not too different.
+
 # I plotted the L2 norm for the difference between the average projections of each pair of numbers, and their test /
 # train classification errors to show that they are inversely related
 # This plot is really good for explaining the MSE difference
 
 
-# Training MSE for [1.0, 8.0]: 0.07461282117988599
-# Test MSE for [1.0, 8.0]: 0.08328968077903716
-# Training MSE for [3.0, 8.0]: 0.18041039847502371
-# Test MSE for [3.0, 8.0]: 0.25818625591594213
-# Training MSE for [2.0, 7.0]: 0.0917926638169509
-# Test MSE for [2.0, 7.0]: 0.13649378296056222
