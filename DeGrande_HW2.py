@@ -59,20 +59,7 @@ print(Y_train[0:8 ** 2])
 
 ######################################################################################################################
 # Task 1: Use PCA to investigate the dimensionality of Xtrain and plot the first 16 PCA modes as 16x16 images
-
-# dimensionality 2000 x 256 (total) but for 2000 x 16 (for the first 16 PCA modes)
-# fig, ax = plt.subplots(4,4,  - this is the number of pixels
-
-# pca.explained_variance_ field
-
-# create the PCA object, train it with Xtrain, then plot the components using the same code that he has in the helper
-# notebook
-
-# from lecture 10 code
-# centered_data = X_train - np.mean(X_train, axis=1)[:, None]
-# dU, ds, dVt = np.linalg.svd(centered_data)
-# print(dU.shape, ds.shape, dVt.shape ) # U, S, V^t
-
+# create the PCA object, train it with Xtrain, then plot the components using plot_digits
 
 # from documentation for PCA --- If 0 < n_components < 1 and svd_solver == 'full', select the number of components
 # such that the amount of variance that needs to be explained is greater than the percentage specified by n_components"
@@ -87,35 +74,20 @@ print(Y_train[0:8 ** 2])
 # if you leave n_components_ blank - it'll use all of the data
 pca = PCA()
 pca.fit(X_train)  # .fit automatically centers the data
-# X_train_standard = StandardScaler().fit_transform(X_train)
-# The reason why online sources use StandardScaler is to remove the ambiguity of different units for different
-# dimensions. However since each feature corresponds to a pixel value and uses the same units, we don't need to use
-# StandardScaler. Especially since we want the principal components to align with pixels with high variation, we don't
-# want to make each feature (pixel) have the same variance
-# pixel values are already between 0 and 1 so there really is no need to standard, however, if the features were on
-# different scales then it would be important to standardize
+# X_train_standard = StandardScaler().fit_transform(X_train) -- don't need to scale b/c they are all pixels
 
-# finding the effective dimension --  see where the singular values taper off ~100?
-# plot pca with the full dimension - not just the n_compnents = 16
-# log of variances
-# you should plot more than just 16 - you should plot all of them
-
-
-# UNCOMMENT LATER
 plt.figure()
+plt.rcParams['font.size'] = '20'
 plt.plot(pca.singular_values_)
 #plt.plot(np.log(pca.explained_variance_))
+#plt.vlines(x=150, ymin=-5, ymax=100, colors='r')
 plt.title('Dimensionality Analysis')
 plt.xlabel('index $j$')
-plt.ylabel('$\log(\sigma_j)$')
-plt.legend(['pca.singular_values_', 'log(pca.singular_values_)'])
-
+plt.ylabel('$\sigma_j$')
+plt.legend(['pca.singular_values_'])
 
 # plot the first 16
-# UNCOMMENT LATER
-# plot_digits(pca.components_, 4, 'First 16 PCA Modes')
-# Where Principle component 1 (top, left) accounts for the most variation and is used the most in grouping the
-# handwritten digits into 0 through 9.
+plot_digits(pca.components_, 4, 'First 16 PCA Modes')
 
 # reconstruct it
 pca16 = PCA(16)
@@ -128,16 +100,11 @@ transformed_X = pca.transform(X_train)
 
 ######################################################################################################################
 # Task 2: How many PCA modes do you need in order to approximate Xtrain up to 60%, 80%, and 90% in the Frobenius norm?
-# Do you need the entire 16x16 image for each data point? No?
-
-
+# Do you need the entire 16x16 image for each data point?
 # from documentation:  singular_values_ndarray of shape (n_components,) = The singular values corresponding to each of
 # the selected components. The singular values are equal to the 2-norms of the n_components variables in the
 # lower-dimensional space.
 
-# need more modes to approximate greater percentage
-# Yeah it seems that measuring variance allows for less PC's but the Frobenius norm requires more
-# we want to take the 2-norm of the singular values
 modesSum = np.sum(pca.singular_values_ ** 2)
 normTotal = np.sqrt(modesSum)
 print(normTotal)
@@ -182,20 +149,6 @@ plt.title('Number of PCA Modes for Forbenius Norm Approximation')
 plt.xlabel('Percentage of Forbenius Norm')
 plt.ylabel('Number of PCA modes')
 
-# do you need the entire 16x16 image for each data point?
-# by looking at the modes we would need for each norm , we can see what pixels are important and which ones aren't important
-# corner pixels are not important b/c they're usually blank in all of the images of the digits
-# how many modes to capture 90% of variance - plot the images of the rank
-# can tell what the digit is with THESE ranks, so i don't need as much information to identify them
-# mode that is close to 16? don't need the full 16x16 image (256)
-# the answer is NO b/c it is significantly less than 256 - may be larger for 90%?
-# 90% more than 16 but less than 256
-# no we don't, most of the data can be approzimated with less modes
-
-
-
-
-# maybe reconstruct them to prove this?
 
 # Task 3: Train a classifier to distinguish the digits 1 and 8
 # From canvas discussion:
@@ -208,8 +161,6 @@ plt.ylabel('Number of PCA modes')
 # components. Now your training images are each represented by a point in the 16-dimensional component space. Train your
 # classifier to associate points in 16 dimensional space with either the label +1 or =1 by fitting it to the training
 # data and training labels.
-# dont cast the values from the prediction to (-1,1)
-# PC mode = 16
 
 # get indices with np.where
 # then we can do x18 = X_train[indices] == this will take all the rows that correspond to it
@@ -245,10 +196,7 @@ def new_label(labels, num1, num2):
 X1_8 = np.delete(X1_8_preflip, 0, 0)
 
 # project X1_8 onto the first 16 PCA modes of X_train computed previously (Task 1)
-# pca16 = PCA(16) # n_components = 16
-# pca16.fit(X_train)
 atrain = pca16.transform(X1_8)
-# append a row of 1's to the beginning ??
 
 # reassign labels - create btrain
 btrain = new_label(Y1_8, 1, 8)
@@ -263,7 +211,6 @@ btrain = new_label(Y1_8, 1, 8)
 
 afunmodel = linear_model.RidgeCV()  # alpha=1) # alpha is our lambda
 # ridgeCV optimizes for us so it will provide the best model for each classifier
-# use pca.transform and ridge.predict on the test data
 afunmodel.fit(atrain, btrain)
 betas = afunmodel.predict(atrain)  # or is this (atest)
 
@@ -293,19 +240,16 @@ rounded = np.round(betasTest)
 
 # Let's plot some figures
 plt.figure()
-#plt.plot(ones,'ko')
-#plt.plot(eights,'kx')
 for i in range(0,len(rounded)):
     if rounded[i] == -1:
         plt.plot(i,betasTest[i],'kx')
     elif rounded[i] == 1:
         plt.plot(i,betasTest[i], 'ko')
-#plt.plot(betasTest,'bo')
 plt.hlines(y=-1, xmin=0, xmax=len(betasTest),colors='r')
 plt.hlines(y=1, xmin=0, xmax=len(betasTest),colors='r')
 plt.title('Test Data (1,8) Performance')
 plt.xlabel('index $j$')
-plt.ylabel('$Digit Label$')
+plt.ylabel('Digit Label')
 plt.legend(['predicted 1s', 'predicted 8s'])
 
 
@@ -345,19 +289,16 @@ rounded38 = np.round(betasTest38)
 
 # Let's plot some figures
 plt.figure()
-#plt.plot(ones,'ko')
-#plt.plot(eights,'kx')
 for i in range(0,len(rounded38)):
-    if rounded38[i] == -1:
+    if (betasTest38[i] < 0):
         plt.plot(i,betasTest38[i],'kx')
-    elif rounded38[i] == 1:
+    elif (betasTest38[i] >= 0):
         plt.plot(i,betasTest38[i], 'ko')
-#plt.plot(betasTest,'bo')
 plt.hlines(y=-1, xmin=0, xmax=len(betasTest38),colors='r')
 plt.hlines(y=1, xmin=0, xmax=len(betasTest38),colors='r')
 plt.title('Test Data (3,8) Performance')
 plt.xlabel('index $j$')
-plt.ylabel('$Digit Label$')
+plt.ylabel('Digit Label')
 plt.legend(['predicted 3s', 'predicted 8s'])
 
 
@@ -394,31 +335,14 @@ rounded27 = np.round(betasTest27)
 
 # Let's plot some figures
 plt.figure()
-#plt.plot(ones,'ko')
-#plt.plot(eights,'kx')
 for i in range(0,len(rounded27)):
     if rounded27[i] == -1:
         plt.plot(i,betasTest27[i],'kx')
     elif rounded27[i] == 1:
         plt.plot(i,betasTest27[i], 'ko')
-#plt.plot(betasTest,'bo')
 plt.hlines(y=-1, xmin=0, xmax=len(betasTest27),colors='r')
 plt.hlines(y=1, xmin=0, xmax=len(betasTest27),colors='r')
 plt.title('Test Data (2,7) Performance')
 plt.xlabel('index $j$')
-plt.ylabel('$Digit Label$')
+plt.ylabel('Digit Label')
 plt.legend(['predicted 2s', 'predicted 7s'])
-
-
-# The model performs the best in training and testing for digits 1 and 8. It performs the worst for digits 3 and 8 in
-# both training and testing, and the model for digits 2 and 7 is between these two end member cases.
-# The performance varies because of the shape of the digits. If digits are more similar, 3 and 8, the model will not
-# perform as well, both in training and testing, but for digits that are distinct, 1 and 8, the model performs
-# well on both the training and the testing. Digits 2 and 7 are a good middle ground to represent this as the digits
-# are not too similar, but not too different.
-
-# I plotted the L2 norm for the difference between the average projections of each pair of numbers, and their test /
-# train classification errors to show that they are inversely related
-# This plot is really good for explaining the MSE difference
-
-
