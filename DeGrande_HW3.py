@@ -33,11 +33,12 @@ dataPath = '/Users/jensen/Library/Mobile Documents/com~apple~CloudDocs/AMATH582/
 # import the data
 training = np.loadtxt(dataPath + 'wine_training.csv', delimiter=',')
 testing = np.loadtxt(dataPath + 'wine_test.csv', delimiter=',')
+newbatchX = np.loadtxt(dataPath+ 'wine_new_batch.csv', delimiter=',')
 
 # convert to np array
 training = np.array(training)
 testing = np.array(testing)
-
+newbatchX = np.array(newbatchX)
 
 
 # separate the data into features X and output Y
@@ -63,20 +64,18 @@ Y_test = testing[:,11]
 # (look at lecture 16 code)
 
 # Next we normalize and center the training set
-
+# normalize X_train
 X_train_N = X_train.shape[0]
 
 X_train_mean = np.mean(X_train, axis=0)
 X_train_std = np.std(X_train, axis=0)
-
-# must normalize it
 X_train_normal = (X_train - np.matlib.repmat(X_train_mean, X_train_N, 1))/np.matlib.repmat(X_train_std, X_train_N, 1)
 
+# normalize the Y_train
 Y_train_N = Y_train.shape[0]
 
 Y_train_mean = np.mean(Y_train, axis=0)
 Y_train_std = np.std(Y_train, axis=0)
-
 Y_train_normal = (Y_train - Y_train_mean)/Y_train_std
 
 print(X_train_normal.shape)
@@ -93,54 +92,72 @@ print(Y_train_normal.shape)
 # while we're here we also normalize and center the test set.
 # NOTE: the shift and scaling here are those computed on the training set
 X_test_N = X_test.shape[0]
+newbatchX_N = newbatchX.shape[0]
 
 # do the same with the test set but use the TRAINING MEAN and STD
 X_test_normal = (X_test - np.matlib.repmat(X_train_mean, X_test_N, 1))/np.matlib.repmat(X_train_std, X_test_N, 1)
 Y_test_normal = (Y_test - Y_train_mean)/Y_train_std
+newbatchX_normal = (newbatchX - np.matlib.repmat(X_train_mean, newbatchX_N,1))/np.matlib.repmat(X_train_std,newbatchX_N,1)
 
 
 # Task 1: Use linear regression (least squares) to fit a linear model to the training set
 # linear regression
 
+# create linear regression model
 lin = LinearRegression().fit(X_train_normal, Y_train_normal)
+# make predictions for training and testing sets (normalized)
 lin_train_pred = lin.predict(X_train_normal)
 lin_test_pred = lin.predict(X_test_normal)
+# compute MSE
 lin_train_mse = mean_squared_error(Y_train_normal, lin_train_pred)
 lin_test_mse = mean_squared_error(Y_test_normal, lin_test_pred)
+# predict the values for the new batch
+lin_newbatch_pred = lin.predict(newbatchX_normal)
+lin_newbatch_pred = (lin_newbatch_pred + Y_train_mean)*Y_train_std # denormalize to get actual values
+
 
 #print(lin.score(X_train_normal,Y_train_normal))
 
+print('linear train')
 print(lin_train_mse)
+print('linear test')
 print(lin_test_mse)
 
 # kernel ridge regression for Gaussian
-sigma = 0.5
+#sigma = 0.5
 
 # create the testing parameters for the gaussian (rbf) estimator
+# make it a linspace of values to test so we can cross validate and determine the best parameters
 gauss_alpha = 2**np.linspace(-5,5,10)
-gauss_gamma = 1/(2*(gauss_alpha**2))
-#scoring = ['gauss_alpha', 'gauss_gamma']
+#gauss_gamma = 1/(2*(gauss_alpha**2))
+gauss_gamma = 1/(2*(2**gauss_alpha)**2)
 
-parameters = {'kernel':'rbf', 'alpha':gauss_alpha, 'gamma':gauss_gamma}
+parameters = {'kernel':['rbf'], 'alpha':(gauss_alpha), 'gamma':(gauss_gamma)}
 svc = sklearn.kernel_ridge.KernelRidge() # create estimator
-KRR = GridSearchCV(svc, parameters)
+# use GridSearchCV and the defined estimator and parameters to determine the best alpha and gamma - obtain train mse
+KRR = GridSearchCV(svc, parameters, cv=10, return_train_score=True)
 #KRR = sklearn.kernel_ridge.KernelRidge(kernel='rbf', alpha = gauss_alpha,gamma=gauss_gamma) # gamma = 1/(2**(sigma**2))
-KRR.fit(X_train_normal, Y_train_normal)
+KRR.fit(X_train_normal, Y_train_normal)  # train the optimized model
+#sorted(KRR.cv_results_.keys())
 
+optimized = KRR.best_estimator_
+print(optimized)
 
+# use our fitted model to predict the Y for train set
+Ytrain_pred = KRR.predict(X_train_normal)
+# use our fitted, best parameter model to predict the Y values on the test set
+Ytest_pred = KRR.predict(X_test_normal)
+# use our fitted, best parameter model to predict the Y values on the new batch
+Ynew_pred = KRR.predict(newbatchX_normal)
+Ynew_pred = (Ynew_pred + Y_train_mean)*Y_train_std # denormalize to get actual values
 
-#clf = svm.SVC(kernel='linear', C=1, random_state=0)
-#scores = cross_validate(KRR, X_train_normal, Y_train_normal, scoring=scoring,cv=10,return_train_score=True)
-#sorted(scores.keys())
-
-
-
-# use our fitted model to predict the Y values on the test set
-Y_pred_normal = KRR.predict(X_test_normal)
 
 # MSE
-#KRR_train_mse = mean_squared_error(Y_train_normal, Y_pred_normal)
-KRR_test_mse = mean_squared_error(Y_test_normal, Y_pred_normal)
+KRR_train_mse = mean_squared_error(Y_train_normal, Ytrain_pred)
+KRR_test_mse = mean_squared_error(Y_test_normal, Ytest_pred)
+print('rbf train')
+print(KRR_train_mse)
+print('rbf test')
 print(KRR_test_mse)
 
 # plot the predicted values of Y against the test set
@@ -159,17 +176,44 @@ print(KRR_test_mse)
 
 # kernel ridge regression for Laplacian
 # kernel ridge regression for Gaussian
-sigma_lap = 0.5
+#sigma_lap = 0.5
+# define the parameters
+lap_alpha = 2**np.linspace(-5,5,10)
+#lap_gamma = 1/(2**lap_alpha)
+lap_gamma = 1/(2**lap_alpha)
 
-KRR_lap = sklearn.kernel_ridge.KernelRidge(kernel='laplacian', alpha = 0.9,gamma=1/(2*sigma**2)) # gamma = 1/(2**sigma)
+
+parameters_lap = {'kernel':['laplacian'], 'alpha':(lap_alpha), 'gamma':(lap_gamma)}
+lap = sklearn.kernel_ridge.KernelRidge() # create estimator
+# use GridSearchCV and the defined estimator and parameters to determine the best alpha and gamma - obtain train mse
+KRR_lap = GridSearchCV(lap, parameters_lap, cv=10, return_train_score=True)
+KRR_lap.fit(X_train_normal, Y_train_normal)
+
+
+#KRR_lap = sklearn.kernel_ridge.KernelRidge(kernel='laplacian', alpha = 0.9,gamma=1/(2*sigma**2)) # gamma = 1/(2**sigma)
 KRR_lap.fit(X_train_normal, Y_train_normal)
 #score = KRR_lap.score(X_test_normal,Y_test_normal)
 
-# use our fitted model to predict the Y values on the test set
-Y_pred_normal_lap = KRR_lap.predict(X_test_normal)
+optLap = KRR_lap.best_estimator_
+print(optLap)
 
-KRR_lap_test_mse = mean_squared_error(Y_test_normal, Y_pred_normal_lap)
+# use our fitted model to predict the Y values on the train set
+Ytrain_pred_lap = KRR_lap.predict(X_train_normal)
+# use our fitted model to predict the Y values on the test set
+Ytest_pred_lap = KRR_lap.predict(X_test_normal)
+# use our fitted, best parameter model to predict the Y values on the new batch
+Ynew_pred_lap = KRR.predict(newbatchX_normal)
+Ynew_pred_lap = (Ynew_pred_lap + Y_train_mean)*Y_train_std # denormalize to get actual values
+
+
+KRR_lap_train_mse = mean_squared_error(Y_train_normal, Ytrain_pred_lap)
+KRR_lap_test_mse = mean_squared_error(Y_test_normal, Ytest_pred_lap)
+
+print('lap train mse')
+print(KRR_lap_train_mse)
+print('lap test mse')
 print(KRR_lap_test_mse)
+print('done!')
 
 # kernel regression is sensitive to the choice of regularization parameter (lambda) and length scale of the kernel
 # (sigma). Prototype your code on a subset of the data and find a ball-park value for the parameters before running the
