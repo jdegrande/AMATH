@@ -113,7 +113,8 @@ lin_train_mse = mean_squared_error(Y_train_normal, lin_train_pred)
 lin_test_mse = mean_squared_error(Y_test_normal, lin_test_pred)
 # predict the values for the new batch
 lin_newbatch_pred = lin.predict(newbatchX_normal)
-lin_newbatch_pred = (lin_newbatch_pred + Y_train_mean)*Y_train_std # denormalize to get actual values
+lin_newbatch_pred = (lin_newbatch_pred*Y_train_std) + Y_train_mean# denormalize to get actual values
+lin_newbatch_pred_rounded = np.round(lin_newbatch_pred)
 
 
 #print(lin.score(X_train_normal,Y_train_normal))
@@ -128,9 +129,15 @@ print(lin_test_mse)
 
 # create the testing parameters for the gaussian (rbf) estimator
 # make it a linspace of values to test so we can cross validate and determine the best parameters
-gauss_alpha = 2**np.linspace(-5,5,10)
+sgm = np.linspace(-3,3,10)
+lmbd = np.linspace(-3,3,10)
+
+gauss_alpha = 2**lmbd
 #gauss_gamma = 1/(2*(gauss_alpha**2))
-gauss_gamma = 1/(2*(2**gauss_alpha)**2)
+gauss_gamma = 1/(2*(2**sgm)**2)
+# gauss_alpha = 2**np.linspace(-5,5,10)
+# #gauss_gamma = 1/(2*(gauss_alpha**2))
+# gauss_gamma = 1/(2*(2**gauss_alpha)**2)
 
 parameters = {'kernel':['rbf'], 'alpha':(gauss_alpha), 'gamma':(gauss_gamma)}
 svc = sklearn.kernel_ridge.KernelRidge() # create estimator
@@ -143,13 +150,20 @@ KRR.fit(X_train_normal, Y_train_normal)  # train the optimized model
 optimized = KRR.best_estimator_
 print(optimized)
 
+alpha = KRR.best_params_.get("alpha")
+gamma = KRR.best_params_.get("gamma")
+
+rbf_lmbd = np.log2(alpha)
+rbf_sig = np.log2(gamma)
+
 # use our fitted model to predict the Y for train set
 Ytrain_pred = KRR.predict(X_train_normal)
 # use our fitted, best parameter model to predict the Y values on the test set
 Ytest_pred = KRR.predict(X_test_normal)
 # use our fitted, best parameter model to predict the Y values on the new batch
 Ynew_pred = KRR.predict(newbatchX_normal)
-Ynew_pred = (Ynew_pred + Y_train_mean)*Y_train_std # denormalize to get actual values
+Ynew_pred = (Ynew_pred*Y_train_std)+ Y_train_mean # denormalize to get actual values
+Ynew_pred_rounded = np.round(Ynew_pred)
 
 
 # MSE
@@ -160,7 +174,7 @@ print(KRR_train_mse)
 print('rbf test')
 print(KRR_test_mse)
 
-# plot the predicted values of Y against the test set
+# # plot the predicted values of Y against the test set
 # fig, ax = plt.subplots(6,2, figsize=(12,6))
 #
 # for j in range(6):
@@ -177,33 +191,52 @@ print(KRR_test_mse)
 # kernel ridge regression for Laplacian
 # kernel ridge regression for Gaussian
 #sigma_lap = 0.5
+
+# first let's run the search on a range of -5 to 5 with resolution of 10 to intially assess where a good value might be
+# then let's rerun the search
+# Rerun the grid search, but instead of a grid centered on zero with a range of 4 on each side, center it on the value
+# you found in your first search, and lower the range so say you got a value of 2.5, your grid search would be like
+# 1.5 to 3.5 or even finer, up to you, just don't make the range smaller than one box from the previous search, or you
+# could miss the maximum
+
 # define the parameters
-lap_alpha = 2**np.linspace(-5,5,10)
-#lap_gamma = 1/(2**lap_alpha)
-lap_gamma = 1/(2**lap_alpha)
+lap_sgm = np.linspace(-1,3,10) #0,4 # 1,3
+lap_lmbd = np.linspace(-1,3,10) #-3,1 # -3,1
+
+lap_alpha = 2**lap_lmbd
+lap_gamma = 1/(2**lap_sgm)
 
 
 parameters_lap = {'kernel':['laplacian'], 'alpha':(lap_alpha), 'gamma':(lap_gamma)}
 lap = sklearn.kernel_ridge.KernelRidge() # create estimator
 # use GridSearchCV and the defined estimator and parameters to determine the best alpha and gamma - obtain train mse
-KRR_lap = GridSearchCV(lap, parameters_lap, cv=10, return_train_score=True)
+KRR_lap = GridSearchCV(lap, parameters_lap, cv=10, return_train_score=True,scoring='neg_mean_squared_error')
 KRR_lap.fit(X_train_normal, Y_train_normal)
 
 
 #KRR_lap = sklearn.kernel_ridge.KernelRidge(kernel='laplacian', alpha = 0.9,gamma=1/(2*sigma**2)) # gamma = 1/(2**sigma)
-KRR_lap.fit(X_train_normal, Y_train_normal)
+#KRR_lap.fit(X_train_normal, Y_train_normal)
 #score = KRR_lap.score(X_test_normal,Y_test_normal)
 
 optLap = KRR_lap.best_estimator_
 print(optLap)
+
+alpha_lap = KRR_lap.best_params_.get("alpha")
+gamma_lap = KRR_lap.best_params_.get("gamma")
+
+
+lap_lmbd = np.log2(alpha_lap)
+lap_sig = np.log2(gamma_lap)
 
 # use our fitted model to predict the Y values on the train set
 Ytrain_pred_lap = KRR_lap.predict(X_train_normal)
 # use our fitted model to predict the Y values on the test set
 Ytest_pred_lap = KRR_lap.predict(X_test_normal)
 # use our fitted, best parameter model to predict the Y values on the new batch
-Ynew_pred_lap = KRR.predict(newbatchX_normal)
-Ynew_pred_lap = (Ynew_pred_lap + Y_train_mean)*Y_train_std # denormalize to get actual values
+Ynew_pred_lap_norm = KRR_lap.predict(newbatchX_normal)
+Ynew_pred_lap = (Ynew_pred_lap_norm*Y_train_std)+ Y_train_mean # denormalize to get actual values
+Ynew_pred_lap_rounded = np.round(Ynew_pred_lap)
+
 
 
 KRR_lap_train_mse = mean_squared_error(Y_train_normal, Ytrain_pred_lap)
@@ -213,6 +246,20 @@ print('lap train mse')
 print(KRR_lap_train_mse)
 print('lap test mse')
 print(KRR_lap_test_mse)
+
+
+print('linear predictions')
+print(lin_newbatch_pred)
+print(lin_newbatch_pred_rounded)
+
+print('rbf predictions')
+print(Ynew_pred)
+print(Ynew_pred_rounded)
+
+print('Laplacian predictions')
+print(Ynew_pred_lap)
+print(Ynew_pred_lap_rounded)
+
 print('done!')
 
 # kernel regression is sensitive to the choice of regularization parameter (lambda) and length scale of the kernel
