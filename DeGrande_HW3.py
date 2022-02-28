@@ -2,7 +2,7 @@
 # Author: Jensen DeGrande
 # Computational Methods for Data Analysis, AMATH 582
 # Date of creation: 02/22/22
-# Last edited: -- -- --
+# Last edited: 02/25/22
 
 # Problem/Purpose: Your goal is to develop an algorithm that predicts the quality of wine from a series of chemical
 # measurements. This will be used to price the wines
