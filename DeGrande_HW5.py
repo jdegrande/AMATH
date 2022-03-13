@@ -35,9 +35,11 @@ import scipy.fftpack as spfft  # for discrete cosine transform
 # set the data path and import the data
 dataPath = '/Users/jensen/Library/Mobile Documents/com~apple~CloudDocs/AMATH582/Homework/HW5/'
 img_path = dataPath + 'SonOfMan.png'
+unknown_path = dataPath + 'UnknownImage.npz'
 
 # read image
 img_og = ski.io.imread(img_path)
+unknown_img = np.load(unknown_path)
 
 # convert to grayscale and visualize
 img_og = ski.color.rgb2gray(img_og)
@@ -256,8 +258,8 @@ fig, ax = plt.subplots(3, 3, figsize=(8,8))
 
 trial = [1,2,3]
 M_values = [0.2, 0.4, 0.6]
-for j in range (0,len(M_values)):
-    for i in range(0, len(trial)):
+for j in range (0,1): #len(M_values)):
+    for i in range(0,1):# len(trial)):
         # take random permutation of N
         # then take the first M entries
         N = pixels
@@ -299,8 +301,51 @@ for j in range (0,len(M_values)):
         # plt.title("Optimized image")
 
 
+# TASK 3 #############################################################################################################
+unknown_y = unknown_img.f.y
+unknown_B = unknown_img.f.B
+unknown_iDCT = construct_iDCT_Mat(50, 50)
+unknown_pixels = 50*50
 
 
+unk_N = unknown_pixels
+r = 0.6 # this will be what we iterate for 0.2, 0.4, and 0.6
+M = int(r * unk_N)
+
+# I = np.identity(pixels)  # NxN
+# B_total = np.random.permutation(I)  # MxN
+# B = B_total[0:M, :]
+
+# f_vals = our flattened image
+# y = B dot image_flat,
+
+
+#y = np.dot(unknown_B, unknown_flat)  # multiply by the flattened image
+# A = B dot iDCT
+A = np.dot(unknown_B, unknown_iDCT)  # multipy by the inverse DCT to reconstruct
+
+# cvx optimization solving
+# x is CLEARLY the DCT vector of an image F* that hopefully resembles the original image
+x_l1 = cvx.Variable(unk_N)
+
+# alt formulation
+objective_l1 = cvx.Minimize(cvx.norm(x_l1, 1))
+constraints_l1 = [A @ x_l1 == unknown_y]  # constaint in cvs = A @ x == y
+prob_l1 = cvx.Problem(objective_l1, constraints_l1)
+
+prob_l1.solve(verbose=True, solver='CVXOPT', max_iter=1000, reltol=1e-2, featol=1e-2)
+
+# result should be Nx1
+result = x_l1.value
+
+# then do the iDCT and reshape it back to the original image like we did in task 1
+d_reconstruction = np.dot(unknown_iDCT, result)
+d_shaped = np.reshape(d_reconstruction, (50, 50))
+
+
+plt.figure(100)
+plt.imshow(d_shaped,cmap='PiYG')
+plt.title("Unknown image")
 
 
 
