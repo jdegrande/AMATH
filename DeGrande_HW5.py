@@ -44,9 +44,11 @@ unknown_img = np.load(unknown_path)
 # convert to grayscale and visualize
 img_og = ski.color.rgb2gray(img_og)
 
-# fig, ax = plt.subplots(1, 2, figsize=(20,10))
-# ax[0].imshow(img_og, cmap = 'gray')
-# ax[0].set_title("Original image")
+fig, ax = plt.subplots(1, 2, figsize=(20,10))
+ax[0].imshow(img_og, cmap = 'gray')
+ax[0].set_title("Original image")
+ax[0].set_xlabel('pixel')
+ax[0].set_ylabel('pixel')
 
 print("Original size: ", img_og.shape)
 
@@ -56,8 +58,10 @@ img = ski.transform.rescale(img_og, 0.18, anti_aliasing=False)
 
 print("Rescaled size: ", img.shape)
 
-# ax[1].imshow(img, cmap='gray')
-# ax[1].set_title("Rescaled image")
+ax[1].imshow(img, cmap='gray')
+ax[1].set_title("Rescaled image")
+ax[1].set_xlabel('pixel')
+ax[1].set_ylabel('pixel')
 
 
 numRows = img.shape[0]
@@ -105,18 +109,18 @@ DCT_F = np.matmul(newDCT, f)
 
 # UNCOMMENT THIS FOR REPORT
 # 1b) plot DCT(f) and investigate the compressibility. Do you see a lot of large coefficients??
-# plt.figure(3)
+# plt.figure(1)
 # plt.scatter(index,DCT_F)
-# plt.title('DCT(F)')
-# plt.xlabel('index')
-# plt.ylabel('DCT(F)')
+# plt.title('DCT(F) Coefficents ')
+# plt.xlabel('index [i]')
+# plt.ylabel('coefficient value')
 
 
 # 1c) reconstruct and plot the image after thresholding its DCT to keep the top 5,10,20, and 40 percent of DCT
 # coefficients
 
 DCT_F_copy = np.copy(DCT_F)
-# DCT_F_abs = np.abs(DCT_F_copy)
+DCT_F_abs = np.abs(DCT_F_copy)
 DCT_F_sort = DCT_F_copy[np.argsort(-DCT_F_copy)]
 
 percentages = [0.05, 0.1, 0.2, 0.4]  # take top 5%, 10%, 20%, and 40%
@@ -174,7 +178,9 @@ shaped = np.reshape(reconstruction, (53, 41))
 
 plt.figure(2)
 plt.imshow(shaped, cmap='gray')
-plt.title(str(0.05 * 100) + "% image")
+plt.title(str(0.05 * 100) + "% of coefficients")
+plt.xlabel('pixel')
+plt.ylabel('pixel')
 
 # for 10%
 percent = round(0.1 * len(DCT_F_sort))
@@ -195,7 +201,9 @@ shaped = np.reshape(reconstruction, (53, 41))
 
 plt.figure(3)
 plt.imshow(shaped, cmap='gray')
-plt.title(str(0.1 * 100) + "% image")
+plt.title(str(0.1 * 100) + "% of coefficients")
+plt.xlabel('pixel')
+plt.ylabel('pixel')
 
 
 
@@ -219,7 +227,9 @@ shaped = np.reshape(reconstruction, (53, 41))
 
 plt.figure(4)
 plt.imshow(shaped, cmap='gray')
-plt.title(str(0.2 * 100) + "% image")
+plt.title(str(0.2 * 100) + "% of coefficients")
+plt.xlabel('pixel')
+plt.ylabel('pixel')
 
 
 # for 40%
@@ -241,7 +251,9 @@ shaped = np.reshape(reconstruction, (53, 41))
 
 plt.figure(5)
 plt.imshow(shaped, cmap='gray')
-plt.title(str(0.4 * 100) + "% image")
+plt.title(str(0.4 * 100) + "% of coefficients")
+plt.xlabel('pixel')
+plt.ylabel('pixel')
 
 
 
@@ -254,11 +266,12 @@ plt.title(str(0.4 * 100) + "% image")
 # identity matrix I size NxN
 
 # make a for-loop so it calculates this for three trials
-fig, ax = plt.subplots(3, 3, figsize=(8,8))
-
+fig, ax = plt.subplots(3, 3, figsize=(6,9))
+plt.tight_layout()
+#
 trial = [1,2,3]
 M_values = [0.2, 0.4, 0.6]
-for j in range (0,1): #len(M_values)):
+for j in range (0, 1): #len(M_values)):
     for i in range(0,1):# len(trial)):
         # take random permutation of N
         # then take the first M entries
@@ -274,7 +287,7 @@ for j in range (0,1): #len(M_values)):
         # y = B dot image_flat,
         y = np.dot(B, f)  # multiply by the flattened image
         # A = B dot iDCT
-        A = np.dot(B, newiDCT)  # multipy by the inverse DCT to reconstruct
+        A = np.dot(B, newiDCT)  # multipy by the inverse DCT to reconstruct, this creates the corrupt image
 
         # cvx optimization solving
         # x is CLEARLY the DCT vector of an image F* that hopefully resembles the original image
@@ -296,56 +309,60 @@ for j in range (0,1): #len(M_values)):
 
         # plt.figure(int(i+10))
         ax[j,i].imshow(d_shaped, cmap='gray')
-        ax[j,i].set_title("Trial " + str(i + 1) + ": M = " + str(M_values[j]))
-        # plt.imshow(d_shaped, cmap='gray')
-        # plt.title("Optimized image")
+        ax[j,i].set_title( "M = " + str(M_values[j]) + " - Trial " + str(i + 1))
+        ax[j,i].set_xlabel('pixel')
+        ax[j, i].set_ylabel('pixel')
+        plt.imshow(d_shaped, cmap='gray')
+        plt.title("Optimized image")
 
 
 # TASK 3 #############################################################################################################
-unknown_y = unknown_img.f.y
-unknown_B = unknown_img.f.B
-unknown_iDCT = construct_iDCT_Mat(50, 50)
-unknown_pixels = 50*50
-
-
-unk_N = unknown_pixels
-r = 0.6 # this will be what we iterate for 0.2, 0.4, and 0.6
-M = int(r * unk_N)
-
-# I = np.identity(pixels)  # NxN
-# B_total = np.random.permutation(I)  # MxN
-# B = B_total[0:M, :]
-
-# f_vals = our flattened image
-# y = B dot image_flat,
-
-
-#y = np.dot(unknown_B, unknown_flat)  # multiply by the flattened image
-# A = B dot iDCT
-A = np.dot(unknown_B, unknown_iDCT)  # multipy by the inverse DCT to reconstruct
-
-# cvx optimization solving
-# x is CLEARLY the DCT vector of an image F* that hopefully resembles the original image
-x_l1 = cvx.Variable(unk_N)
-
-# alt formulation
-objective_l1 = cvx.Minimize(cvx.norm(x_l1, 1))
-constraints_l1 = [A @ x_l1 == unknown_y]  # constaint in cvs = A @ x == y
-prob_l1 = cvx.Problem(objective_l1, constraints_l1)
-
-prob_l1.solve(verbose=True, solver='CVXOPT', max_iter=1000, reltol=1e-2, featol=1e-2)
-
-# result should be Nx1
-result = x_l1.value
-
-# then do the iDCT and reshape it back to the original image like we did in task 1
-d_reconstruction = np.dot(unknown_iDCT, result)
-d_shaped = np.reshape(d_reconstruction, (50, 50))
-
-
-plt.figure(100)
-plt.imshow(d_shaped,cmap='PiYG')
-plt.title("Unknown image")
+# unknown_y = unknown_img.f.y
+# unknown_B = unknown_img.f.B
+# unknown_iDCT = construct_iDCT_Mat(50, 50)
+# unknown_pixels = 50*50
+#
+#
+# unk_N = unknown_pixels
+# #r = 0.6 # this will be what we iterate for 0.2, 0.4, and 0.6
+# #M = int(r * unk_N)
+#
+# # I = np.identity(pixels)  # NxN
+# # B_total = np.random.permutation(I)  # MxN
+# # B = B_total[0:M, :]
+#
+# # f_vals = our flattened image
+# # y = B dot image_flat,
+#
+#
+# #y = np.dot(unknown_B, unknown_flat)  # multiply by the flattened image
+# # A = B dot iDCT
+# A = np.dot(unknown_B, unknown_iDCT)  # multipy by the inverse DCT to reconstruct
+#
+# # cvx optimization solving
+# # x is CLEARLY the DCT vector of an image F* that hopefully resembles the original image
+# x_l1 = cvx.Variable(unk_N)
+#
+# # alt formulation
+# objective_l1 = cvx.Minimize(cvx.norm(x_l1, 1))
+# constraints_l1 = [A @ x_l1 == unknown_y]  # constaint in cvs = A @ x == y
+# prob_l1 = cvx.Problem(objective_l1, constraints_l1)
+#
+# prob_l1.solve(verbose=True, solver='CVXOPT', max_iter=1000, reltol=1e-2, featol=1e-2)
+#
+# # result should be Nx1
+# result = x_l1.value
+#
+# # then do the iDCT and reshape it back to the original image like we did in task 1
+# d_reconstruction = np.dot(unknown_iDCT, result)
+# d_shaped = np.reshape(d_reconstruction, (50, 50))
+#
+#
+# plt.figure(100)
+# plt.imshow(d_shaped,cmap='PiYG')
+# plt.title("Unknown image")
+# plt.xlabel('pixel')
+# plt.ylabel('pixel')
 
 
 
