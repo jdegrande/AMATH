@@ -199,7 +199,7 @@ print(KRR_test_mse)
 # 1.5 to 3.5 or even finer, up to you, just don't make the range smaller than one box from the previous search, or you
 # could miss the maximum
 
-# define the parameters
+# define the parameters as a linspace to find the best values for each
 lap_sgm = np.linspace(-1,3,10) #0,4 # 1,3
 lap_lmbd = np.linspace(-1,3,10) #-3,1 # -3,1
 
@@ -262,8 +262,4 @@ print(Ynew_pred_lap_rounded)
 
 print('done!')
 
-# kernel regression is sensitive to the choice of regularization parameter (lambda) and length scale of the kernel
-# (sigma). Prototype your code on a subset of the data and find a ball-park value for the parameters before running the
-# full simulation
 
-# GridSearchCV
