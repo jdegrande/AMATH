@@ -2,7 +2,7 @@
 # Author: Jensen DeGrande
 # Computational Methods for Data Analysis, AMATH 582
 # Date of creation: 02/28/22
-# Last edited: -- -- --
+# Last edited: 03/05/22
 
 # Problem/Purpose: Your goal is to test the performance of spectral clustering and a simple semi-supervised regression
 # algorithm on the 1984 house voting records data set.
@@ -27,7 +27,6 @@ from sklearn.linear_model import Ridge
 
 # TASK 1 #############################################################################################################
 # import and preprocess the data set
-
 # set the data path
 dataPath = '/Users/jensen/Library/Mobile Documents/com~apple~CloudDocs/AMATH582/Homework/HW4/'
 
@@ -75,7 +74,7 @@ dist = scipy.spatial.distance_matrix(inputs, inputs, p =2)
 
 # this is what you need to tune - it will be a different number for the gaussian
 r = 1
-# weight will effect the shape of the clusters
+# weight will affect the shape of the clusters
 
 # compute the weight matrix eta on pairwise distances
 W = eta(dist, r)
@@ -83,32 +82,6 @@ W = eta(dist, r)
 # plot it
 plt.figure(1)
 plt.spy(W>=0.01)
-
-# visualize the graph using NetworkX
-#
-# import networkx as nx
-#
-# G = nx.Graph()
-#
-# for i in range(N):
-#   for j in range(N):
-#     if i != j and W[i,j] != 0 :
-#       G.add_edge(i, j, weight=W[i,j])
-
-# fig, ax = plt.subplots(1,2, figsize=(16,8))
-#
-# ax[0].scatter(inputs[:,0], inputs[:,1], color='b')
-# ax[0].set_aspect('equal')
-# ax[0].set_xlabel('$x_1$')
-# ax[0].set_ylabel('$x_2$')
-# ax[0].set_title('Input (Unlabelled) data')
-#
-#
-# nx.draw_networkx_nodes(G, inputs, node_size=100, ax = ax[1])
-# nx.draw_networkx_edges(G, inputs, ax = ax[1])
-# ax[1].set_aspect('equal')
-# ax[1].set_title('Proximity Graph')
-
 
 # compute Laplacian matrices
 
@@ -120,8 +93,7 @@ L = D - W # unnormalized Laplacian with sigma = r = 1
 eigval, eigvec = np.linalg.eigh(L)
 
 # we need to sort the eigenvalues and vectors
-# a very manual way of sorting things (why not use np.sort????)
-eigsorted = eigval.argsort() # sort them based on eigval
+eigsorted = eigval.argsort() # sort them based on eigval index
 l = eigval[eigsorted]
 V = eigvec[:, eigsorted]
 
@@ -136,6 +108,7 @@ secondEigenvector = V[:,1]
 q1 = np.sign(secondEigenvector)
 error = mean_squared_error(output,q1)
 
+# function to calculate the number of misclassified values (probably something in python for this?)
 def misclassified(true,pred):
     num_misclass = 0
     for i in range(0,len(true)):
@@ -242,9 +215,10 @@ clusteringAccuracy_best = 1 - ((1 / 435) * num_misclass_best)
 # with? And the eigenvectors are kind of like PCA where the first few are the most important?
 # And we only really need the first two eigenvectors because we are mainly relying on the Fiedler vector?
 
-M = [2, 3, 4, 5, 6]  # 10 number of eigenvectors to include
-J = [5, 10, 20, 40]  # 8 number of members to include
+M = [2, 3, 4, 5, 6]  # number of eigenvectors to include
+J = [5, 10, 20, 40]  # number of members to include
 
+# run a for-loop to go through all of the possible combinations of M and J (and fills my love for for-loops)
 for i in range(0,len(M)):
     for j in range (0,len(J)):
         matrix = eigvec_best[:,0:M[i]] # matrix is size 435 x M
