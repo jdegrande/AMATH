@@ -2,7 +2,7 @@
 # Author: Jensen DeGrande
 # Computational Methods for Data Analysis, AMATH 582
 # Date of creation: 01/31/22
-# Last edited: -- -- --
+# Last edited: 02/12/22
 
 # Problem/Purpose: Your goal is to train a classifier to distinguish images of handwritten digits from the famous MNIST
 # data set. This is a classic problem in machine learning and often times one of the first benchmarks one tries new
@@ -21,7 +21,7 @@ import sklearn
 from sklearn import linear_model
 from sklearn.decomposition import PCA
 
-# ############### Setting up the data - I miss sections in matlab :(, wonder if there is something similar in python?
+# ############### Setting up the data
 # set the data path
 dataPath = '/Users/jensen/Library/Mobile Documents/com~apple~CloudDocs/AMATH582/Homework/HW2/'
 # load the data
@@ -105,14 +105,17 @@ transformed_X = pca.transform(X_train)
 # the selected components. The singular values are equal to the 2-norms of the n_components variables in the
 # lower-dimensional space.
 
+# calculate norm
 modesSum = np.sum(pca.singular_values_ ** 2)
 normTotal = np.sqrt(modesSum)
 print(normTotal)
 
+# calculate percentage of the norm
 norm90 = normTotal * .9
 norm80 = normTotal * .8
 norm60 = normTotal * .6
 
+# fun function to determine how many pca needed for each percentage of norm
 def pca_modes(percent):
     pca_loop = PCA(n_components=1)  # start at the first mode to initialize loop
     pca_loop.fit(X_train)
@@ -128,6 +131,7 @@ print(pca_modes(0.9)) #14
 print(pca_modes(0.8)) #7
 print(pca_modes(0.6)) #3
 
+# allocate storage for the modes
 modes= []
 num = np.linspace(0,1.0,num =100)
 
@@ -168,9 +172,8 @@ plt.ylabel('Number of PCA modes')
 # functions for Task 3 ###############################################################################################
 # Write a function that extracts the features and labels of the digits 1 and 8 from the training data set X(1,8)
 # and Y(1,8) --- pass X_train and Y_train
-def extract(X, Y, num1, num2):
+def extract(X, Y, num1, num2): # X = full X dataset, Y = full Y dataset, num1/num2 = numbers you want to distinguish
     count = 0
-    # extractX = np.array([])
     extractX = np.empty((1, 256))
     extractY = np.array([])
     for i in range(0, len(Y)):
@@ -183,7 +186,8 @@ def extract(X, Y, num1, num2):
     return extractX, extractY
 
 # function for relabeling values with -1 and 1
-def new_label(labels, num1, num2):
+def new_label(labels, num1, num2): # labels = Y dataset of extracted numbers (second output of extract function),
+    # num1/num2 = numbers you want to relabel
     for i in range(0, len(labels)):
         if labels[i] == num1:
             labels[i] = -1
@@ -228,7 +232,7 @@ newMSE = (1/len(btrain)) * np.linalg.norm(betas - btrain)**2
 # it over fits the training data
 # Test data will give you an idea of how a new sample will perform
 
-[Xtest1_8_pre, Ytest1_8] = extract(X_test, Y_test, 1, 8)  # this is the training set for our classifier
+[Xtest1_8_pre, Ytest1_8] = extract(X_test, Y_test, 1, 8)
 Xtest1_8 = np.delete(Xtest1_8_pre, 0, 0)
 atest = pca16.transform(Xtest1_8)
 btest = new_label(Ytest1_8, 1, 8)
@@ -261,7 +265,7 @@ plt.legend(['predicted 1s', 'predicted 8s'])
 [X3_8temp, Y3_8] = extract(X_train, Y_train, 3, 8)  # this is the training set for our classifier
 X3_8 = np.delete(X3_8temp, 0, 0)
 
-atrain38 = pca16.transform(X3_8) # append a row of 1's to the beginning ??
+atrain38 = pca16.transform(X3_8)
 
 # reassign labels - create btrain
 btrain38 = new_label(Y3_8, 3, 8)
@@ -270,12 +274,12 @@ btrain38 = new_label(Y3_8, 3, 8)
 model38 = linear_model.RidgeCV()  # alpha=1) # alpha is our lambda
 # use pca.transform and ridge.predict on the test data
 model38.fit(atrain38, btrain38)
-betas38 = model38.predict(atrain38)  # or is this (atest)
+betas38 = model38.predict(atrain38)
 
 MSEtrain38 = sklearn.metrics.mean_squared_error(btrain38, betas38)
 
 # let's do testing for values 3 and 8
-[Xtest3_8temp, Ytest3_8] = extract(X_test, Y_test, 3, 8)  # this is the training set for our classifier
+[Xtest3_8temp, Ytest3_8] = extract(X_test, Y_test, 3, 8)
 Xtest3_8 = np.delete(Xtest3_8temp, 0, 0)
 
 atest38 = pca16.transform(Xtest3_8)
@@ -303,11 +307,11 @@ plt.legend(['predicted 3s', 'predicted 8s'])
 
 
 
-# let's repeat the process for (2,7)
+# let's repeat the process for (2,7) - quickly realizing I should've made this a function
 [X2_7temp, Y2_7] = extract(X_train, Y_train, 2, 7)  # this is the training set for our classifier
 X2_7 = np.delete(X2_7temp, 0, 0)
 
-atrain27 = pca16.transform(X2_7) # append a row of 1's to the beginning ??
+atrain27 = pca16.transform(X2_7)
 
 # reassign labels - create btrain
 btrain27 = new_label(Y2_7, 2, 7)
@@ -321,7 +325,7 @@ betas27 = model27.predict(atrain27)  # or is this (atest)
 MSEtrain27 = sklearn.metrics.mean_squared_error(btrain27, betas27)
 
 # let's do testing for values 3 and 8
-[Xtest2_7temp, Ytest2_7] = extract(X_test, Y_test, 2, 7)  # this is the training set for our classifier
+[Xtest2_7temp, Ytest2_7] = extract(X_test, Y_test, 2, 7)
 Xtest2_7 = np.delete(Xtest2_7temp, 0, 0)
 
 atest27 = pca16.transform(Xtest2_7)
